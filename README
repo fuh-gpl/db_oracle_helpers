@@ -25,3 +25,6 @@ Voraussetzungen:
    GRANT DBA TO "OPS$ORACLE";
    ALTER USER "OPS$ORACLE" DEFAULT ROLE ALL;
   
+Installation:
+=============
+install -m 755 fhg_ora* /usr/local/bin/
