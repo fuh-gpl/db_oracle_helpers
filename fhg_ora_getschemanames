@@ -1,0 +1,52 @@
+#!/bin/sh
+#
+# Copyright (c) 2012 FuH Entwicklungsgesellschaft mbH, Umkirch, Germany. All rights reserved.
+# Author: Philipp Hoefflin, 2012, hoefflin@fuh-e.de
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation in version 2.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software Foundation,
+# Inc., 675 Mass Ave, Cambridge MA 02139, USA or see <http://www.gnu.org/licenses/>
+#
+# Dfk/hoe   Namen aller DB-User außer $SYSUSERS auf stdout ausgeben
+#
+# TODO - Systembenutzer, die nicht angezeigt werden sollen hier eintragen
+SYSUSERS="ANONYMOUS APEX_030200 APEX_PUBLIC_USER APPQOSSYS CTXSYS DIP DBSNMP MGMT_VIEW ORACLE_OCM OPS\$ORACLE OUTLN PERFSTAT SCOTT SYS SYSMAN SYSTEM WMSYS XDB XS\$NULL"
+
+if [ `id -un` != "oracle" -a `id -un` != "root" ]; then
+        echo "FEHLER: Programm darf nur als Benutzer root oder oracle ausgeführt werden." >&2
+        exit 1;
+fi
+
+# su nach oracle und Shellumgebung herstellen
+if [ `id -un` != "oracle" ]; then
+        exec su - oracle sh -c "`basename $0` $*"
+fi
+
+USERID='/ as sysdba'
+SQLCMD=sqlplus
+TMPFILE=$( mktemp /tmp/$(basename $0 .sh).XXXXXX) || exit 1
+SYSUSERS_SQLLST="'${SYSUSERS// /','}'"
+
+trap "rm -f $TMPFILE" EXIT SIGHUP SIGINT SIGQUIT SIGABRT SIGTERM
+
+
+# $SQLCMD $USERID | grep "XXFhGUSERSXX" | sed "s/.*XXFhGUSERSXX//" <<EOF
+$SQLCMD -s $USERID >$TMPFILE <<EOF
+SET HEADING    OFF
+select 'XXFhGUSERSXX' || lower(USERNAME)
+from ALL_USERS
+where upper(USERNAME) not in ($SYSUSERS_SQLLST)
+order by USERNAME;
+EOF
+
+grep "XXFhGUSERSXX" $TMPFILE | sed 's/.*XXFhGUSERSXX//'
+

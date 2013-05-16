@@ -1,0 +1,147 @@
+#!/bin/sh
+#
+# Copyright (c) 2012 FuH Entwicklungsgesellschaft mbH, Umkirch, Germany. All rights reserved.
+# Author: Philipp Hoefflin, 2012, hoefflin@fuh-e.de
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation in version 2.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software Foundation,
+# Inc., 675 Mass Ave, Cambridge MA 02139, USA or see <http://www.gnu.org/licenses/>
+#
+# Dfk/hoe   Alle Datenbanken mit exp exportieren
+#
+# Voraussetzung:
+#    CREATE USER "OPS$ORACLE"
+#      IDENTIFIED EXTERNALLY
+#      DEFAULT TABLESPACE USERS
+#      TEMPORARY TABLESPACE TEMP
+#      PROFILE DEFAULT
+#      ACCOUNT UNLOCK;
+#    
+#      GRANT DBA TO "OPS$ORACLE";
+#      ALTER USER "OPS$ORACLE" DEFAULT ROLE ALL;
+DBAUSER="/"
+export LC_MESSAGES=C
+
+if [ `id -un` != "oracle" -a `id -un` != "root" ]; then
+        echo "FEHLER: Programm darf nur als Benutzer root oder oracle ausgeführt werden." >&2
+        exit 1;
+fi
+
+if [ `id -un` != "oracle" ]; then
+        exec su - oracle sh -c "cd `pwd`; `basename $0` $*"
+fi
+
+EXPORT=exp
+EXTNAME=
+# TMPFILE=$( mktemp /tmp/$(basename $0 .sh).XXXXXX) || exit 1
+DBS=
+ERR=0
+COMPRESS=false
+DIR=
+DELETE_OLD=false
+
+GET_OPTS=:
+while $GET_OPTS; do
+        case "x$1" in
+        x-*)
+                case "$1" in
+                -compress)      COMPRESS=: ;;
+		-weekday)	EXTNAME=".$(date '+%A')"
+				;;
+                -dir)   shift
+                        DIR="$1"
+                        ;;
+                -h)     echo "$0: Aufruf:" 
+                        echo "$0 [-compress|-h] [Liste der Datenbanken]"
+                        exit 0 ;;
+                -del)   DELETE_OLD=:
+                        ;;
+                *)      echo "FEHLER: falscher Parameter '$1'" >&2
+                        $0 -h
+                        exit 40 ;;
+                esac
+                shift
+                ;;
+        *)      # Ende Optionen
+                GET_OPTS=false
+                ;;
+        esac
+done
+
+
+# trap "rm -f $TMPFILE" EXIT SIGHUP SIGINT SIGQUIT SIGABRT SIGTERM
+
+if [ $# -gt 0 ]; then
+        # Datenbank(en) übergeben
+        DBS="$@"
+else
+        # alle vorhandenen Datenabnken
+        DBS=`fhg_ora_getschemanames`
+fi
+
+
+# Sicherungsverz. angegeben
+if [ -n "$DIR" ]; then
+        if [ ! -d "$DIR" -o ! -w "$DIR" ]; then
+                echo "FEHLER: Das Sicherungsverzeichnis '$DIR' existiert nicht oder hat falsche Verzeichnisrechte." >&2
+                exit 17; # FE_FKT
+        fi
+        if cd "$DIR"; then
+                echo "INFO: Exportverzeichnis: $DIR"
+        else
+                echo "FEHLER: Change Directory in das Verzeichnis '$DIR' ist fehlgeschlagen" >&2
+                exit 17; # FE_FKT
+        fi
+fi
+
+
+for SCHEMA in $DBS; do
+        X_ERR=0
+	BASENAME="exp.${SCHEMA}$EXTNAME"
+        OUTFILE="$BASENAME.out"
+        DUMPFILE="$BASENAME.dmp"
+        echo "INFO: BEGIN Export Datenbankuser $SCHEMA: `date`"
+        # Alte Sicherungsdateien zuvor löschen
+        if $DELETE_OLD; then
+                for FILE in $OUTFILE $OUTFILE.gz $DUMPFILE $DUMPFILE.gz; do
+                        if [ -f $FILE ]; then
+                                echo "INFO: lösche alte Datei '$FILE'"
+                                rm -f $FILE
+                        fi
+                done
+        fi
+
+        sh -x -c "exp $DBAUSER OWNER=$SCHEMA FILE=$DUMPFILE STATISTICS=NONE CONSISTENT=Y GRANTS=Y COMPRESS=Y" > $OUTFILE 2>&1
+        X_ERR=$?
+        if grep -q 'Export terminated successfully without warnings' $OUTFILE; then
+                : OK
+        elif grep -q 'Export erfolgreich und ohne Warnungen beendet.' $OUTFILE; then
+                : OK
+        elif grep -q 'Export erfolgreich ohne Warnungen beendet.' $OUTFILE; then
+                : OK
+        else
+                echo "FEHLER: beim Export der Datenbank $DB"
+                [ $X_ERR == 0 ] && X_ERR=1
+        fi
+        if [ $X_ERR -ne 0 ]; then
+                echo "FEHLER: beim Export des Datenbankusers $SCHEMA"
+        fi
+        if $COMPRESS; then
+                gzip -f  $OUTFILE
+                gzip -f  $DUMPFILE
+        fi
+        echo "INFO: END   ERR: $X_ERR Export Datenbankuser $SCHEMA: `date`"
+        [ $ERR == 0 ] && ERR=$X_ERR
+done
+
+exit $ERR
+

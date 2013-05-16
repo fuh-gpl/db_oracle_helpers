@@ -1,0 +1,83 @@
+#!/bin/bash
+#
+# Copyright (c) 2012 FuH Entwicklungsgesellschaft mbH, Umkirch, Germany. All rights reserved.
+# Author: Philipp Hoefflin, 2012, hoefflin@fuh-e.de
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation in version 2.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software Foundation,
+# Inc., 675 Mass Ave, Cambridge MA 02139, USA or see <http://www.gnu.org/licenses/>
+#
+# Dfk/hoe Komplettsicherung der DB-Instanz mittels RMAN ohne Recovery Catalog
+
+if [ `id -un` != "oracle" -a `id -un` != "root" ]; then
+        echo "FEHLER: Programm darf nur als Benutzer root oder oracle ausgeführt werden." >&2
+        exit 1;
+fi
+
+# su nach oracle und Shellumgebung herstellen
+if [ `id -un` != "oracle" ]; then
+        exec su - oracle sh -c "`basename $0` $*"
+fi
+
+TPRO=$(basename $0)
+ERR=0
+DBAUSER='/'
+TMPFILE=$( mktemp /tmp/$(basename $0 .sh).XXXXXX) || exit 1
+trap "rm -f $TMPFILE" EXIT SIGHUP SIGINT SIGQUIT SIGABRT SIGTERM
+
+echo "$TPRO: BEGIN - $(date '+%Y%m%d-%H:%M:%S')"
+
+cat >$TMPFILE <<EOF
+CONFIGURE CONTROLFILE AUTOBACKUP ON;
+CONFIGURE RETENTION POLICY TO REDUNDANCY 5;
+CONFIGURE DEVICE TYPE DISK PARALLELISM 1 BACKUP TYPE TO COMPRESSED BACKUPSET;
+show all;
+run {
+  BACKUP AS COMPRESSED BACKUPSET INCREMENTAL LEVEL 0 DATABASE INCLUDE CURRENT CONTROLFILE PLUS ARCHIVELOG DELETE ALL INPUT;
+  BACKUP SPFILE;
+  # unkomprimierte Version (d.h. kein Backuppiece)
+  BACKUP AS COPY CURRENT CONTROLFILE;
+  DELETE NOPROMPT OBSOLETE;
+  DELETE NOPROMPT EXPIRED BACKUP;
+}
+exit
+EOF
+
+echo "INFO -- Oracle-Shellumgebung"
+echo "###############################################"
+echo "###############################################"
+set | grep "^NLS"
+set | grep "^ORA"
+echo
+
+echo "INFO -- RMAN-Controlfile:"
+echo "###############################################"
+echo "###############################################"
+cat $TMPFILE
+echo 
+echo 
+echo "Starte RMAN:"
+echo "###############################################"
+echo "###############################################"
+$ORACLE_HOME/bin/rman target "$DBAUSER" @$TMPFILE
+ERR=$?
+
+
+# # LOG-SEQ für Recovery protokollieren
+# echo "select 'NEXT_SEQ_' || max(next_change#) from v\$archived_log where archived = 'YES' group by thread#;" | sqlplus "/ as sysdba"
+
+
+echo "###############################################"
+echo "###############################################"
+
+echo "$TPRO: ENDE  - $(date '+%Y%m%d-%H:%M:%S') - RET: $ERR"
+exit $ERR

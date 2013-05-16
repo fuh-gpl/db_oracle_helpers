@@ -1,0 +1,96 @@
+#!/bin/sh
+#
+# Copyright (c) 2012 FuH Entwicklungsgesellschaft mbH, Umkirch, Germany. All rights reserved.
+# Author: Philipp Hoefflin, 2012, hoefflin@fuh-e.de
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation in version 2.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software Foundation,
+# Inc., 675 Mass Ave, Cambridge MA 02139, USA or see <http://www.gnu.org/licenses/>
+#
+# Dau 20120518/hoe ($Rev: 8888 $)
+# Dfk 20120518/hoe Oracle-Komplettsicherung
+TPRO=$(basename $0)
+ERR=0
+PATH="$PATH:$(dirname $0)"; 		# add install directory to PATH
+
+# Defaults
+EXPDIR="/home/oracle/DATA/export"
+LOGDIR="/home/oracle/DATA"
+
+# Arbeitsverzeichnis wechseln (wegen möglicher Berechtigungsprobleme)
+cd /tmp
+
+# Parameterverarbeitung
+GET_OPTS=:
+while [ $# -gt 0 ]; do
+	case "$1" in
+	--expdir|-e)  
+		shift
+		EXPDIR="$1"
+		;;
+	--logdir|-l)  
+		shift
+		LOGDIR="$1"
+		;;
+	--help|-h) 
+		cat <<EOF
+
+Aufruf: 
+ $0 <Parameter>
+
+Gültige Parameter:
+ --expdir|-e <Verzeichnis> 
+    Zielverzeichnis für Datenbankdump
+    Default: $EXPDIR
+ --logdir|-l <Verzeichnis> 
+    Zielverzeichnis für das Protokoll des Kommandos fhg_ora_dbinfo falls installiert
+    Default: $LOGDIR
+ 
+ --help|-h
+   Diesen Hilfetext ausgeben
+EOF
+		exit 0 ;;
+	*) 	echo "FEHLER: ungültiger Parameter '$1'" >&2
+		$0 --help
+		exit 40 ;;
+	esac
+	shift
+done 
+
+echo "$TPRO: BEGIN          - $(date '+%Y%m%d-%H:%M:%S')"
+echo "$TPRO: BEGIN - EXPORT - $(date '+%Y%m%d-%H:%M:%S')"
+fhg_ora_export -compress -del -dir "$EXPORTDIR"
+X_ERR=$?; [ $ERR -eq 0 ] && ERR=$X_ERR
+echo "$TPRO: ENDE  - EXPORT - $(date '+%Y%m%d-%H:%M:%S') - RET: $X_ERR"
+
+echo "$TPRO: BEGIN - RMAN   - $(date '+%Y%m%d-%H:%M:%S')"
+fhg_ora_rman
+X_ERR=$?; [ $ERR -eq 0 ] && ERR=$X_ERR
+echo "$TPRO: ENDE  - RMAN   - $(date '+%Y%m%d-%H:%M:%S') - RET: $X_ERR"
+echo "$TPRO: ENDE           - $(date '+%Y%m%d-%H:%M:%S') - RET: $ERR"
+
+if [ -n "$(type -p fhg_ora_dbinfo)" ]; then
+	# DB-Info AM ENDE ausgeben, damit die aktuellen RMAN-Informationen enthalten sind
+	echo "$TPRO: BEGIN - DBINFO - $(date '+%Y%m%d-%H:%M:%S')"
+	fhg_ora_dbinfo -dir "$LOGDIR"
+	X_ERR=$?; [ $ERR -eq 0 ] && ERR=$X_ERR
+	echo "$TPRO: ENDE  - DBINFO - $(date '+%Y%m%d-%H:%M:%S') - RET: $X_ERR"
+fi
+
+
+# 20120727/hoe Recyclebin leeren
+echo "$TPRO: BEGIN - PURGE RECYCLEBIN - $(date '+%Y%m%d-%H:%M:%S')"
+fhg_ora_purge_recyclebin
+X_ERR=$?; [ $ERR -eq 0 ] && ERR=$X_ERR
+echo "$TPRO: ENDE  - PURGE RECYCLEBIN - $(date '+%Y%m%d-%H:%M:%S') - RET: $X_ERR"
+
+exit $ERR

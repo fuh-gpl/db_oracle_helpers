@@ -1,0 +1,55 @@
+#!/bin/sh
+#
+# Copyright (c) 2012 FuH Entwicklungsgesellschaft mbH, Umkirch, Germany. All rights reserved.
+# Author: Philipp Hoefflin, 2012, hoefflin@fuh-e.de
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation in version 2.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software Foundation,
+# Inc., 675 Mass Ave, Cambridge MA 02139, USA or see <http://www.gnu.org/licenses/>
+#
+# 
+# Dfk/hoe   gelöschte Objekte endgültig freigeben ('Papierkorb leeren')
+
+if [ `id -un` != "oracle" -a `id -un` != "root" ]; then
+        echo "FEHLER: Programm darf nur als Benutzer root oder oracle ausgeführt werden." >&2
+        exit 1;
+fi
+
+# su nach oracle und Shellumgebung herstellen
+if [ `id -un` != "oracle" ]; then
+        exec su - oracle sh -c "`basename $0` $*"
+fi
+
+USERID=" / as sysdba"
+SQLCMD=sqlplus
+TMPFILE=$( mktemp /tmp/$(basename $0 .sh).XXXXXX) || exit 1
+MELDUNG_OK="DBA-Recyclebin bereinigt";                          # das wird im erfolgsfall ausgegeben
+
+trap "rm -f $TMPFILE" EXIT SIGHUP SIGINT SIGQUIT SIGABRT SIGTERM
+
+
+# $SQLCMD $USERID | grep "XXFhGUSERSXX" | sed "s/.*XXFhGUSERSXX//" <<EOF
+# cat <<EOF
+$SQLCMD -s "$USERID" >$TMPFILE <<EOF
+purge dba_recyclebin;
+EOF
+
+# 
+if grep -q "$MELDUNG_OK" $TMPFILE; then
+        ERR=0
+else
+        ERR=1
+        echo "DBA-Recyclebin konnte offenbar nicht geleert werden" >&2
+        cat $TMPFILE
+fi
+exit $ERR
+
