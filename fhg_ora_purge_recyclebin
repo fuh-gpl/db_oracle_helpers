@@ -17,10 +17,10 @@
 # Inc., 675 Mass Ave, Cambridge MA 02139, USA or see <http://www.gnu.org/licenses/>
 #
 # 
-# Dfk/hoe   gelöschte Objekte endgültig freigeben ('Papierkorb leeren')
+# Dfk/hoe   gelÃ¶schte Objekte endgÃ¼ltig freigeben ('Papierkorb leeren')
 
 if [ `id -un` != "oracle" -a `id -un` != "root" ]; then
-        echo "FEHLER: Programm darf nur als Benutzer root oder oracle ausgeführt werden." >&2
+        echo "FEHLER: Programm darf nur als Benutzer root oder oracle ausgefÃ¼hrt werden." >&2
         exit 1;
 fi
 
@@ -28,6 +28,7 @@ fi
 if [ `id -un` != "oracle" ]; then
         exec su - oracle sh -c "`basename $0` $*"
 fi
+# . /usr/local/etc/profile-oracle
 
 USERID=" / as sysdba"
 SQLCMD=sqlplus

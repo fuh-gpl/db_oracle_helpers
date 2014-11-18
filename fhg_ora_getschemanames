@@ -16,13 +16,13 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 675 Mass Ave, Cambridge MA 02139, USA or see <http://www.gnu.org/licenses/>
 #
-# Dfk/hoe   Namen aller DB-User außer $SYSUSERS auf stdout ausgeben
+# Dfk/hoe   Namen aller DB-User auÃŸer $SYSUSERS auf stdout ausgeben
 #
 # TODO - Systembenutzer, die nicht angezeigt werden sollen hier eintragen
 SYSUSERS="ANONYMOUS APEX_030200 APEX_PUBLIC_USER APPQOSSYS CTXSYS DIP DBSNMP MGMT_VIEW ORACLE_OCM OPS\$ORACLE OUTLN PERFSTAT SCOTT SYS SYSMAN SYSTEM WMSYS XDB XS\$NULL"
 
 if [ `id -un` != "oracle" -a `id -un` != "root" ]; then
-        echo "FEHLER: Programm darf nur als Benutzer root oder oracle ausgeführt werden." >&2
+        echo "FEHLER: Programm darf nur als Benutzer root oder oracle ausgefÃ¼hrt werden." >&2
         exit 1;
 fi
 
@@ -30,6 +30,7 @@ fi
 if [ `id -un` != "oracle" ]; then
         exec su - oracle sh -c "`basename $0` $*"
 fi
+# . /usr/local/etc/profile-oracle
 
 USERID='/ as sysdba'
 SQLCMD=sqlplus

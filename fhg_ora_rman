@@ -19,7 +19,7 @@
 # Dfk/hoe Komplettsicherung der DB-Instanz mittels RMAN ohne Recovery Catalog
 
 if [ `id -un` != "oracle" -a `id -un` != "root" ]; then
-        echo "FEHLER: Programm darf nur als Benutzer root oder oracle ausgeführt werden." >&2
+        echo "FEHLER: Programm darf nur als Benutzer root oder oracle ausgefÃ¼hrt werden." >&2
         exit 1;
 fi
 
@@ -27,6 +27,7 @@ fi
 if [ `id -un` != "oracle" ]; then
         exec su - oracle sh -c "`basename $0` $*"
 fi
+# . /usr/local/etc/profile-oracle
 
 TPRO=$(basename $0)
 ERR=0
@@ -72,7 +73,7 @@ $ORACLE_HOME/bin/rman target "$DBAUSER" @$TMPFILE
 ERR=$?
 
 
-# # LOG-SEQ für Recovery protokollieren
+# # LOG-SEQ fÃ¼r Recovery protokollieren
 # echo "select 'NEXT_SEQ_' || max(next_change#) from v\$archived_log where archived = 'YES' group by thread#;" | sqlplus "/ as sysdba"
 
 

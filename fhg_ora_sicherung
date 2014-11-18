@@ -24,9 +24,9 @@ PATH="$PATH:$(dirname $0)"; 		# add install directory to PATH
 
 # Defaults
 EXPDIR="/home/oracle/DATA/export"
-LOGDIR="/home/oracle/DATA"
+LOGDIR="/home/oracle/DATA/dbinfo"
 
-# Arbeitsverzeichnis wechseln (wegen möglicher Berechtigungsprobleme)
+# Arbeitsverzeichnis wechseln (wegen mÃ¶glicher Berechtigungsprobleme)
 cd /tmp
 
 # Parameterverarbeitung
@@ -47,19 +47,19 @@ while [ $# -gt 0 ]; do
 Aufruf: 
  $0 <Parameter>
 
-Gültige Parameter:
+GÃ¼ltige Parameter:
  --expdir|-e <Verzeichnis> 
-    Zielverzeichnis für Datenbankdump
+    Zielverzeichnis fÃ¼r Datenbankdump
     Default: $EXPDIR
  --logdir|-l <Verzeichnis> 
-    Zielverzeichnis für das Protokoll des Kommandos fhg_ora_dbinfo falls installiert
+    Zielverzeichnis fÃ¼r das Protokoll des Kommandos fhg_ora_dbinfo falls installiert
     Default: $LOGDIR
  
  --help|-h
    Diesen Hilfetext ausgeben
 EOF
 		exit 0 ;;
-	*) 	echo "FEHLER: ungültiger Parameter '$1'" >&2
+	*) 	echo "FEHLER: ungÃ¼ltiger Parameter '$1'" >&2
 		$0 --help
 		exit 40 ;;
 	esac
@@ -68,7 +68,7 @@ done
 
 echo "$TPRO: BEGIN          - $(date '+%Y%m%d-%H:%M:%S')"
 echo "$TPRO: BEGIN - EXPORT - $(date '+%Y%m%d-%H:%M:%S')"
-fhg_ora_export -compress -del -dir "$EXPORTDIR"
+fhg_ora_export -compress -del -dir "$EXPDIR"
 X_ERR=$?; [ $ERR -eq 0 ] && ERR=$X_ERR
 echo "$TPRO: ENDE  - EXPORT - $(date '+%Y%m%d-%H:%M:%S') - RET: $X_ERR"
 
@@ -92,5 +92,9 @@ echo "$TPRO: BEGIN - PURGE RECYCLEBIN - $(date '+%Y%m%d-%H:%M:%S')"
 fhg_ora_purge_recyclebin
 X_ERR=$?; [ $ERR -eq 0 ] && ERR=$X_ERR
 echo "$TPRO: ENDE  - PURGE RECYCLEBIN - $(date '+%Y%m%d-%H:%M:%S') - RET: $X_ERR"
+
+if [ $ERR -ne 0 ]; then
+	echo "FEHLER: Bei der Oracle-Sicherung ist ein Fehler aufgetreten, bitte Protokoll prÃ¼fen." >&2
+fi
 
 exit $ERR

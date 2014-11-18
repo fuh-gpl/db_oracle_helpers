@@ -32,13 +32,14 @@ DBAUSER="/"
 export LC_MESSAGES=C
 
 if [ `id -un` != "oracle" -a `id -un` != "root" ]; then
-        echo "FEHLER: Programm darf nur als Benutzer root oder oracle ausgeführt werden." >&2
+        echo "FEHLER: Programm darf nur als Benutzer root oder oracle ausgefÃ¼hrt werden." >&2
         exit 1;
 fi
 
 if [ `id -un` != "oracle" ]; then
         exec su - oracle sh -c "cd `pwd`; `basename $0` $*"
 fi
+# . /usr/local/etc/profile-oracle
 
 EXPORT=exp
 EXTNAME=
@@ -81,7 +82,7 @@ done
 # trap "rm -f $TMPFILE" EXIT SIGHUP SIGINT SIGQUIT SIGABRT SIGTERM
 
 if [ $# -gt 0 ]; then
-        # Datenbank(en) übergeben
+        # Datenbank(en) Ã¼bergeben
         DBS="$@"
 else
         # alle vorhandenen Datenabnken
@@ -110,11 +111,11 @@ for SCHEMA in $DBS; do
         OUTFILE="$BASENAME.out"
         DUMPFILE="$BASENAME.dmp"
         echo "INFO: BEGIN Export Datenbankuser $SCHEMA: `date`"
-        # Alte Sicherungsdateien zuvor löschen
+        # Alte Sicherungsdateien zuvor lÃ¶schen
         if $DELETE_OLD; then
-                for FILE in $OUTFILE $OUTFILE.gz $DUMPFILE $DUMPFILE.gz; do
+                for FILE in $OUTFILE $OUTFILE.gz $OUTFILE.gz $DUMPFILE $DUMPFILE.gz $DUMPFILE.gz; do
                         if [ -f $FILE ]; then
-                                echo "INFO: lösche alte Datei '$FILE'"
+                                echo "INFO: lÃ¶sche alte Datei '$FILE'"
                                 rm -f $FILE
                         fi
                 done
@@ -138,9 +139,14 @@ for SCHEMA in $DBS; do
         if $COMPRESS; then
                 gzip -f  $OUTFILE
                 gzip -f  $DUMPFILE
+		ERR_COMPRESS=$?
+		if [ $ERR_COMPRESS -ne 0 ]; then
+			echo "FEHLER: beim Komprimieren" >&2
+		fi
         fi
         echo "INFO: END   ERR: $X_ERR Export Datenbankuser $SCHEMA: `date`"
         [ $ERR == 0 ] && ERR=$X_ERR
+        [ $ERR == 0 ] && ERR=$ERR_COMPRESS
 done
 
 exit $ERR

@@ -1,0 +1,71 @@
+#!/bin/sh
+#
+# Copyright (c) 2014 FuH Entwicklungsgesellschaft mbH, Umkirch, Germany. All rights reserved.
+# Author: Philipp Hoefflin, 2014, hoefflin@fuh-e.de
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation in version 2.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software Foundation,
+# Inc., 675 Mass Ave, Cambridge MA 02139, USA or see <http://www.gnu.org/licenses/>
+#
+# Dfk/hoe   statistics aktualisieren (je Schema + dictionary)
+#
+RET=0
+SCHEMALIST="$@"
+if [ -z "$SCHEMALIST" ]; then
+	SCHEMALIST=$(/usr/local/bin/fhg_ora_getschemanames)
+fi
+
+if [ `id -un` != "oracle" -a `id -un` != "root" ]; then
+        echo "FEHLER: Programm darf nur als Benutzer root oder oracle ausgeführt werden." >&2
+        exit 1;
+fi
+
+# su nach oracle und Shellumgebung herstellen
+if [ `id -un` != "oracle" ]; then
+        exec su - oracle sh -c "`basename $0` $*" </dev/null
+fi
+# . /usr/local/etc/profile-oracle
+
+USERID='/ as sysdba'
+SQLCMD=sqlplus
+
+
+
+for SCHEMA in $SCHEMALIST; do
+	SCHEMA=$(echo $SCHEMA | tr '[:lower:]' '[:upper:]')
+	echo "# BEGIN gather_schema_stats - '$SCHEMA' - $(date)"
+	$SQLCMD -s $USERID <<EOF
+BEGIN
+  dbms_stats.gather_schema_stats('$SCHEMA',cascade=>TRUE);
+END;
+/
+EOF
+	X_RET=$?;  [ $RET -eq 0 ] && RET=$X_RET
+	echo "# END   gather_schema_stats - '$SCHEMA' - RET: $X_RET $(date)"
+	
+done
+
+# Dictionary Stats:
+echo "# BEGIN gather_dictionary_stats - $(date)"
+	$SQLCMD -s $USERID <<EOF
+BEGIN
+  dbms_stats.gather_dictionary_stats;
+END;
+/
+EOF
+X_RET=$?;  [ $RET -eq 0 ] && RET=$X_RET
+echo "# END   gather_dictionary_stats - RET: $X_RET $(date)"
+	
+
+echo "# END - RET: $RET $(date)"
+
+exit $RET

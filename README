@@ -1,17 +1,17 @@
 Oracle-Hilfskommandos zur Installation auf einem Datenbankserver. Die Komamndos
-können entweder als root oder als oracle aufgerufen werden, sqlplus wird in beiden 
-Fällen als User oracle abgesetzt.
+kÃ¶nnen entweder als root oder als oracle aufgerufen werden, sqlplus wird in beiden 
+FÃ¤llen als User oracle abgesetzt.
 
 Voraussetzungen: 
 ================
 
 1: Oracle-Umgebungsparameter:
- Die Oracle-Shellumgebungsparameter müssen für den Systemuser oracle von Systemseite 
+ Die Oracle-Shellumgebungsparameter mÃ¼ssen fÃ¼r den Systemuser oracle von Systemseite 
  beim Start einer Loginshell (z.B. 'su - oracle')korrekt hergestellt werden. 
 
 2: Ausreichende DB-Berechtigungen:
  Der Systemuser oracle muss ausreichende DB-Berechtigungen auf einige Systemviews erhalten, 
- diese können entweder einzeln aus den SQLs ermittelt werden oder bei nicht sicherheitskritischen 
+ diese kÃ¶nnen entweder einzeln aus den SQLs ermittelt werden oder bei nicht sicherheitskritischen 
  Anwendungen oder ausreichender Absicherung des Systemaccounts oracle wie folgt gesetzt werden: 
 
  SQL: 
