@@ -72,6 +72,11 @@ fhg_ora_export -compress -del -dir "$EXPDIR"
 X_ERR=$?; [ $ERR -eq 0 ] && ERR=$X_ERR
 echo "$TPRO: ENDE  - EXPORT - $(date '+%Y%m%d-%H:%M:%S') - RET: $X_ERR"
 
+# echo "$TPRO: BEGIN - EXPORT-datapump - $(date '+%Y%m%d-%H:%M:%S')"
+# fhg_ora_export_datapump -compress -del -dir "$EXPDIR"
+# X_ERR=$?; [ $ERR -eq 0 ] && ERR=$X_ERR
+# echo "$TPRO: ENDE  - EXPORT-datapump - $(date '+%Y%m%d-%H:%M:%S') - RET: $X_ERR"
+
 echo "$TPRO: BEGIN - RMAN   - $(date '+%Y%m%d-%H:%M:%S')"
 fhg_ora_rman
 X_ERR=$?; [ $ERR -eq 0 ] && ERR=$X_ERR
