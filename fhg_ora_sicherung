@@ -81,6 +81,7 @@ echo "$TPRO: ENDE           - $(date '+%Y%m%d-%H:%M:%S') - RET: $ERR"
 if [ -n "$(type -p fhg_ora_dbinfo)" ]; then
 	# DB-Info AM ENDE ausgeben, damit die aktuellen RMAN-Informationen enthalten sind
 	echo "$TPRO: BEGIN - DBINFO - $(date '+%Y%m%d-%H:%M:%S')"
+	[ -d "$LOGDIR" ] || mkdir "$LOGDIR"
 	fhg_ora_dbinfo -dir "$LOGDIR"
 	X_ERR=$?; [ $ERR -eq 0 ] && ERR=$X_ERR
 	echo "$TPRO: ENDE  - DBINFO - $(date '+%Y%m%d-%H:%M:%S') - RET: $X_ERR"

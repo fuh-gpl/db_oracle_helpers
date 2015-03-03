@@ -113,7 +113,7 @@ for SCHEMA in $DBS; do
         echo "INFO: BEGIN Export Datenbankuser $SCHEMA: `date`"
         # Alte Sicherungsdateien zuvor löschen
         if $DELETE_OLD; then
-                for FILE in $OUTFILE $OUTFILE.gz $OUTFILE.gz $DUMPFILE $DUMPFILE.gz $DUMPFILE.gz; do
+                for FILE in $OUTFILE $OUTFILE.gz $DUMPFILE $DUMPFILE.gz; do
                         if [ -f $FILE ]; then
                                 echo "INFO: lösche alte Datei '$FILE'"
                                 rm -f $FILE
