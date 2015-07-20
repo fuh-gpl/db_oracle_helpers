@@ -1,0 +1,90 @@
+#!/bin/sh
+#
+# Copyright (c) 2012 FuH Entwicklungsgesellschaft mbH, Umkirch, Germany. All rights reserved.
+# Author: Philipp Hoefflin, 2012, hoefflin@fuh-e.de
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation in version 2.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software Foundation,
+# Inc., 675 Mass Ave, Cambridge MA 02139, USA or see <http://www.gnu.org/licenses/>
+#
+# Dfk/hoe   Alle SIDs aus der Datei /etc/oratab oder der Porzessermitteln
+# Aufruf: 
+# fhg_ora_foreach_sid <Optionen> [--] <zu rufendes Kommando> <optionen/argumente>
+#  gültige Optionen:
+#  	--sid|-s <SID-Liste>
+# 		Eine durch Komma getrennte Liste von SIDs, für die das angegebene
+# 		Kommando durchgeführt werden soll. 
+#		Default: alle laufenden Oracle-Instanzen 
+
+# alle Variablen automatisch exportieren
+set -a
+
+TPRO=$(basename $0)
+GETARG=true
+SIDLIST=$(fhg_ora_getsidlist running)
+ORA_PROFILE=/usr/local/etc/profile-oracle
+ERR=0
+
+while $GETARG; do
+	case "$1" in
+	--)	# explizite Ende-Markierung der eigenen Optionen
+		GETARG=false
+		shift
+		;;
+	--sid|-s)
+		shift
+		SIDLIST="${1//,/ }"
+		shift
+		;;
+	*)	# implizites Ende 
+		GETARG=false
+		;;
+	esac
+done
+
+# jetzt ist nur noch das aufzurufende Kommando mit Optionen und Argumenten übrig
+CALL_CMDLINE="${@}"
+
+echo "$TPRO: -------------------------------------------------------------------"
+echo "$TPRO: BEGIN SIDs: $SIDLIST - $(date '+%Y%m%d-%H:%M:%S')"
+
+for SID in $SIDLIST; do
+	# ab hier subshell, um die Shellumgebung 'sauber' zu halten
+	(
+		ERR_SID=0
+		ORACLE_SID="$SID"
+		. $ORA_PROFILE
+	
+		# gibt es diese SID überhaupt?
+		if [ -z "$ORACLE_SID" ]; then
+			echo "FEHLER: ungültige SID angegeben." >&2
+			exit 1
+		fi
+
+		CALL_CMDLINE="${CALL_CMDLINE//\{ORACLE_SID\}/$ORACLE_SID}"
+		echo "$TPRO: -------------------------------------------------------------------"
+		echo "$TPRO: BEGIN SID: $ORACLE_SID - $(date '+%Y%m%d-%H:%M:%S')"
+		echo "$TPRO: Kommando: '$CALL_CMDLINE'"
+
+		# Kommando ausführen und Returnwert an aufrufende Shell zurückmelden
+		eval $CALL_CMDLINE
+		X_ERR=$?
+		echo "$TPRO: ENDE  SID: $ORACLE_SID - $(date '+%Y%m%d-%H:%M:%S') - RET: $X_ERR"
+		exit $X_ERR
+	)
+	ERR_SID=$?
+	[ $ERR -eq 0 ] && ERR=$ERR_SID
+done
+echo "$TPRO: -------------------------------------------------------------------"
+echo "$TPRO: ENDE  SIDs: $SIDLIST - $(date '+%Y%m%d-%H:%M:%S') - RET: $ERR"
+echo "$TPRO: -------------------------------------------------------------------"
+exit $ERR

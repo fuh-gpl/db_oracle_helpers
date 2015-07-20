@@ -15,12 +15,18 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 675 Mass Ave, Cambridge MA 02139, USA or see <http://www.gnu.org/licenses/>
-#
-# Dau 20120518/hoe ($Rev: 8888 $)
-# Dfk 20120518/hoe Oracle-Komplettsicherung
 TPRO=$(basename $0)
 ERR=0
 PATH="$PATH:$(dirname $0)"; 		# add install directory to PATH
+
+# su nach oracle und Shellumgebung herstellen
+if [ `id -un` != "oracle" ]; then
+        exec su - oracle sh -c "`basename $0` $*" </dev/null
+fi
+[ -f "/usr/local/etc/profile-oracle" ] && . /usr/local/etc/profile-oracle
+
+# Defaul: alle autostart-Instanzen
+SIDLIST="$(fhg_ora_getsidlist auto)"
 
 # Defaults
 EXPDIR="/home/oracle/DATA/export"
@@ -41,6 +47,10 @@ while [ $# -gt 0 ]; do
 		shift
 		LOGDIR="$1"
 		;;
+	--sid|-s)  
+		shift
+		SIDLIST="${1//,/ }"
+		;;
 	--help|-h) 
 		cat <<EOF
 
@@ -50,10 +60,17 @@ Aufruf:
 Gültige Parameter:
  --expdir|-e <Verzeichnis> 
     Zielverzeichnis für Datenbankdump
+    Der Pfad kann den Platzhalter '{ORACLE_SID}' enthalten, dieser wird durch die
+    Oracle_SID der betroffenen Instanz ersetzt.
     Default: $EXPDIR
  --logdir|-l <Verzeichnis> 
-    Zielverzeichnis für das Protokoll des Kommandos fhg_ora_dbinfo falls installiert
+    Zielverzeichnis für das Protokoll des Kommandos fhg_ora_dbinfo falls installiert.
+    Der Pfad kann den Platzhalter '{ORACLE_SID}' enthalten, dieser wird durch die
+    Oracle_SID der betroffenen Instanz ersetzt.
     Default: $LOGDIR
+ --sid|-s <ORACLE_SID1[,ORACLE_SID2...]> 
+    Liste der zu sichernden SIDs, 
+    Default: (alle für den autostart markierte Instanzen aus der oratab) $SIDLIST
  
  --help|-h
    Diesen Hilfetext ausgeben
@@ -66,41 +83,56 @@ EOF
 	shift
 done 
 
-echo "$TPRO: BEGIN          - $(date '+%Y%m%d-%H:%M:%S')"
-echo "$TPRO: BEGIN - EXPORT - $(date '+%Y%m%d-%H:%M:%S')"
-fhg_ora_export -compress -del -dir "$EXPDIR"
-X_ERR=$?; [ $ERR -eq 0 ] && ERR=$X_ERR
-echo "$TPRO: ENDE  - EXPORT - $(date '+%Y%m%d-%H:%M:%S') - RET: $X_ERR"
+echo "$TPRO: -------------------------------------------------------------------"
+echo "$TPRO: BEGIN Sicherung - SIDs: $SIDLIST - $(date '+%Y%m%d-%H:%M:%S')"
 
-# echo "$TPRO: BEGIN - EXPORT-datapump - $(date '+%Y%m%d-%H:%M:%S')"
-# fhg_ora_export_datapump -compress -del -dir "$EXPDIR"
-# X_ERR=$?; [ $ERR -eq 0 ] && ERR=$X_ERR
-# echo "$TPRO: ENDE  - EXPORT-datapump - $(date '+%Y%m%d-%H:%M:%S') - RET: $X_ERR"
+for SID in $SIDLIST; do
+	export ORACLE_SID=$SID
+	ERR_SID=0
+	echo "$TPRO: -------------------------------------------------------------------"
+	echo "$TPRO: BEGIN Sicherung - SID: $ORACLE_SID - $(date '+%Y%m%d-%H:%M:%S')"
 
-echo "$TPRO: BEGIN - RMAN   - $(date '+%Y%m%d-%H:%M:%S')"
-fhg_ora_rman
-X_ERR=$?; [ $ERR -eq 0 ] && ERR=$X_ERR
-echo "$TPRO: ENDE  - RMAN   - $(date '+%Y%m%d-%H:%M:%S') - RET: $X_ERR"
-echo "$TPRO: ENDE           - $(date '+%Y%m%d-%H:%M:%S') - RET: $ERR"
+	echo "$TPRO: BEGIN          - $(date '+%Y%m%d-%H:%M:%S')"
+	# echo "$TPRO: BEGIN - EXPORT - $(date '+%Y%m%d-%H:%M:%S')"
+	# 
+	# mkdir "${EXPDIR//\{ORACLE_SID\}/$ORACLE_SID}" 2>/dev/null
+	# fhg_ora_export -compress -del -dir "${EXPDIR//\{ORACLE_SID\}/$ORACLE_SID}"
+	# X_ERR=$?; [ $ERR_SID -eq 0 ] && ERR_SID=$X_ERR
+	# echo "$TPRO: ENDE  - EXPORT - $(date '+%Y%m%d-%H:%M:%S') - RET: $X_ERR"
 
-if [ -n "$(type -p fhg_ora_dbinfo)" ]; then
-	# DB-Info AM ENDE ausgeben, damit die aktuellen RMAN-Informationen enthalten sind
-	echo "$TPRO: BEGIN - DBINFO - $(date '+%Y%m%d-%H:%M:%S')"
-	[ -d "$LOGDIR" ] || mkdir "$LOGDIR"
-	fhg_ora_dbinfo -dir "$LOGDIR"
-	X_ERR=$?; [ $ERR -eq 0 ] && ERR=$X_ERR
-	echo "$TPRO: ENDE  - DBINFO - $(date '+%Y%m%d-%H:%M:%S') - RET: $X_ERR"
-fi
+	echo "$TPRO: BEGIN - EXPORT Datapump - $(date '+%Y%m%d-%H:%M:%S')"
 
+	fhg_ora_export_datapump -compress -del -dir "${EXPDIR//\{ORACLE_SID\}/$ORACLE_SID}"
+	X_ERR=$?; [ $ERR_SID -eq 0 ] && ERR_SID=$X_ERR
+	echo "$TPRO: ENDE  - EXPORT Datapump - $(date '+%Y%m%d-%H:%M:%S') - RET: $X_ERR"
 
-# 20120727/hoe Recyclebin leeren
-echo "$TPRO: BEGIN - PURGE RECYCLEBIN - $(date '+%Y%m%d-%H:%M:%S')"
-fhg_ora_purge_recyclebin
-X_ERR=$?; [ $ERR -eq 0 ] && ERR=$X_ERR
-echo "$TPRO: ENDE  - PURGE RECYCLEBIN - $(date '+%Y%m%d-%H:%M:%S') - RET: $X_ERR"
+	echo "$TPRO: BEGIN - RMAN   - $(date '+%Y%m%d-%H:%M:%S')"
+	fhg_ora_rman
+	X_ERR=$?; [ $ERR_SID -eq 0 ] && ERR_SID=$X_ERR
+	echo "$TPRO: ENDE  - RMAN   - $(date '+%Y%m%d-%H:%M:%S') - RET: $X_ERR"
+	echo "$TPRO: ENDE           - $(date '+%Y%m%d-%H:%M:%S') - RET: $ERR_SID"
 
-if [ $ERR -ne 0 ]; then
-	echo "FEHLER: Bei der Oracle-Sicherung ist ein Fehler aufgetreten, bitte Protokoll prüfen." >&2
-fi
+	if [ -n "$(type -p fhg_ora_dbinfo)" ]; then
+		# DB-Info AM ENDE ausgeben, damit die aktuellen RMAN-Informationen enthalten sind
+		echo "$TPRO: BEGIN - DBINFO - $(date '+%Y%m%d-%H:%M:%S')"
+		mkdir "${LOGDIR//\{ORACLE_SID\}/$ORACLE_SID}" 2>/dev/null
+		fhg_ora_dbinfo -dir "${LOGDIR//\{ORACLE_SID\}/$ORACLE_SID}"
+		X_ERR=$?; [ $ERR_SID -eq 0 ] && ERR_SID=$X_ERR
+		echo "$TPRO: ENDE  - DBINFO - $(date '+%Y%m%d-%H:%M:%S') - RET: $X_ERR"
+	fi
+
+	# Recyclebin leeren
+	echo "$TPRO: BEGIN - PURGE RECYCLEBIN - $(date '+%Y%m%d-%H:%M:%S')"
+	fhg_ora_purge_recyclebin
+	X_ERR=$?; [ $ERR_SID -eq 0 ] && ERR_SID=$X_ERR
+	echo "$TPRO: ENDE  - PURGE RECYCLEBIN - $(date '+%Y%m%d-%H:%M:%S') - RET: $X_ERR"
+
+	echo "$TPRO: ENDE  Sicherung - SID: $ORACLE_SID - $(date '+%Y%m%d-%H:%M:%S') - RET: $ERR_SID"
+	[ $ERR -eq 0 ] && ERR=$ERR_SID
+done
+
+echo "$TPRO: -------------------------------------------------------------------"
+echo "$TPRO: ENDE  Sicherung - SIDs: $SIDLIST - $(date '+%Y%m%d-%H:%M:%S') - RET: $ERR"
+echo "$TPRO: -------------------------------------------------------------------"
 
 exit $ERR

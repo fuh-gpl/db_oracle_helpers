@@ -1,0 +1,43 @@
+#!/bin/sh
+#
+# Copyright (c) 2012 FuH Entwicklungsgesellschaft mbH, Umkirch, Germany. All rights reserved.
+# Author: Philipp Hoefflin, 2012, hoefflin@fuh-e.de
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation in version 2.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software Foundation,
+# Inc., 675 Mass Ave, Cambridge MA 02139, USA or see <http://www.gnu.org/licenses/>
+#
+# Dfk/hoe   Alle SIDs aus der Datei /etc/oratab oder der Porzessermitteln
+# Aufruf: 
+# 	fhg_ora_getsidlist
+#		Alle SIDs liefern
+# 	fhg_ora_getsidlist auto
+#		Nur autostart-SIDs lisfern
+# 	fhg_ora_getsidlist running
+#		SIDs aller laufenden Oracle-Instanzen liefern
+#
+
+case "$1" in
+auto)	# autostart SIDs aus /etc/oratab
+	SIDS=$(grep -v "#" /etc/oratab| grep ':' | egrep ':Y$' | sed 's/:.*//')
+	;;
+running) # nur laufende Instanzen
+	SIDS=$(ps aux | grep ora_pmon_ | grep -v grep | sed 's#.*ora_pmon.##')
+	;;
+*)	# Alle SIDs aus /etc/oratab
+	SIDS=$(grep -v "#" /etc/oratab| grep ':'| sed 's/:.*//')
+	;;
+esac
+
+echo $SIDS
+
+exit 0
