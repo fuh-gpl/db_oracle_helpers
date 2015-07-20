@@ -37,9 +37,9 @@ if [ `id -un` != "oracle" -a `id -un` != "root" ]; then
 fi
 
 if [ `id -un` != "oracle" ]; then
-        exec su - oracle sh -c "cd `pwd`; `basename $0` $*"
+        exec su - oracle sh -c "cd `pwd`; `basename $0` $*"  </dev/null
 fi
-# . /usr/local/etc/profile-oracle
+[ -f "/usr/local/etc/profile-oracle" ] && . /usr/local/etc/profile-oracle
 
 EXPORT=exp
 EXTNAME=
@@ -113,7 +113,7 @@ for SCHEMA in $DBS; do
         echo "INFO: BEGIN Export Datenbankuser $SCHEMA: `date`"
         # Alte Sicherungsdateien zuvor löschen
         if $DELETE_OLD; then
-                for FILE in $OUTFILE $OUTFILE.gz $DUMPFILE $DUMPFILE.gz; do
+                for FILE in $OUTFILE $OUTFILE.gz $OUTFILE.lzo $DUMPFILE $DUMPFILE.gz $DUMPFILE.lzo; do
                         if [ -f $FILE ]; then
                                 echo "INFO: lösche alte Datei '$FILE'"
                                 rm -f $FILE
@@ -137,8 +137,8 @@ for SCHEMA in $DBS; do
                 echo "FEHLER: beim Export des Datenbankusers $SCHEMA"
         fi
         if $COMPRESS; then
-                gzip -f  $OUTFILE
-                gzip -f  $DUMPFILE
+                gzip -f $DUMPFILE &&
+                gzip -f $OUTFILE
 		ERR_COMPRESS=$?
 		if [ $ERR_COMPRESS -ne 0 ]; then
 			echo "FEHLER: beim Komprimieren" >&2

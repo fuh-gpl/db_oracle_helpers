@@ -26,9 +26,9 @@ fi
 
 # su nach oracle und Shellumgebung herstellen
 if [ `id -un` != "oracle" ]; then
-        exec su - oracle sh -c "`basename $0` $*"
+        exec su - oracle sh -c "`basename $0` $*" </dev/null
 fi
-# . /usr/local/etc/profile-oracle
+[ -f "/usr/local/etc/profile-oracle" ] && . /usr/local/etc/profile-oracle
 
 USERID=" / as sysdba"
 SQLCMD=sqlplus

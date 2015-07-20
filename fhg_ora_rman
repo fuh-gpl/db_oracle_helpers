@@ -25,9 +25,9 @@ fi
 
 # su nach oracle und Shellumgebung herstellen
 if [ `id -un` != "oracle" ]; then
-        exec su - oracle sh -c "`basename $0` $*"
+        exec su - oracle sh -c "`basename $0` $*" </dev/null
 fi
-# . /usr/local/etc/profile-oracle
+[ -f "/usr/local/etc/profile-oracle" ] && . /usr/local/etc/profile-oracle
 
 TPRO=$(basename $0)
 ERR=0
@@ -39,7 +39,7 @@ echo "$TPRO: BEGIN - $(date '+%Y%m%d-%H:%M:%S')"
 
 cat >$TMPFILE <<EOF
 CONFIGURE CONTROLFILE AUTOBACKUP ON;
-CONFIGURE RETENTION POLICY TO REDUNDANCY 5;
+CONFIGURE RETENTION POLICY TO REDUNDANCY 3;
 CONFIGURE DEVICE TYPE DISK PARALLELISM 1 BACKUP TYPE TO COMPRESSED BACKUPSET;
 show all;
 run {

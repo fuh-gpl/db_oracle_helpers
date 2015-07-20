@@ -18,7 +18,6 @@
 #
 # Dfk/hoe   statistics aktualisieren (je Schema + dictionary)
 #
-RET=0
 SCHEMALIST="$@"
 if [ -z "$SCHEMALIST" ]; then
 	SCHEMALIST=$(/usr/local/bin/fhg_ora_getschemanames)
@@ -28,12 +27,12 @@ if [ `id -un` != "oracle" -a `id -un` != "root" ]; then
         echo "FEHLER: Programm darf nur als Benutzer root oder oracle ausgeführt werden." >&2
         exit 1;
 fi
+[ -f "/usr/local/etc/profile-oracle" ] && . /usr/local/etc/profile-oracle
 
 # su nach oracle und Shellumgebung herstellen
 if [ `id -un` != "oracle" ]; then
         exec su - oracle sh -c "`basename $0` $*" </dev/null
 fi
-# . /usr/local/etc/profile-oracle
 
 USERID='/ as sysdba'
 SQLCMD=sqlplus
@@ -50,8 +49,7 @@ END;
 /
 EOF
 	X_RET=$?;  [ $RET -eq 0 ] && RET=$X_RET
-	echo "# END   gather_schema_stats - '$SCHEMA' - RET: $X_RET $(date)"
-	
+	echo "# END   gather_schema_stats - '$SCHEMA' - $(date)"
 done
 
 # Dictionary Stats:
@@ -69,3 +67,4 @@ echo "# END   gather_dictionary_stats - RET: $X_RET $(date)"
 echo "# END - RET: $RET $(date)"
 
 exit $RET
+

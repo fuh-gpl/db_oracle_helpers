@@ -19,8 +19,8 @@
 # Dfk/hoe   Namen aller DB-User außer $SYSUSERS auf stdout ausgeben
 #
 # TODO - Systembenutzer, die nicht angezeigt werden sollen hier eintragen
-SYSUSERS="ANONYMOUS APEX_030200 APEX_PUBLIC_USER APPQOSSYS AUDSYS CTXSYS DBSNMP DIP GSMADMIN_INTERNAL GSMCATUSER GSMUSER \
-MGMT_VIEW OPS\$ORACLE ORACLE_OCM OUTLN PERFSTAT SCOTT SYS SYSBACKUP SYSDG SYSKM SYSMAN SYSTEM WMSYS XDB XS\$NULL"
+SYSUSERS="ANONYMOUS APEX_030200 APEX_PUBLIC_USER APPQOSSYS CTXSYS DIP DBSNMP MGMT_VIEW ORACLE_OCM OPS\$ORACLE OPS\$NAGIOS OUTLN PERFSTAT SCOTT SYS SYSMAN SYSTEM WMSYS XDB XS\$NULL"
+SYSUSERS="$SYSUSERS EXFSYS FLOWS_FILES MDSYS ORDDATA ORDPLUGINS ORDSYS SI_INFORMTN_SCHEMA MON_ORACLE"
 
 if [ `id -un` != "oracle" -a `id -un` != "root" ]; then
         echo "FEHLER: Programm darf nur als Benutzer root oder oracle ausgeführt werden." >&2
@@ -29,9 +29,9 @@ fi
 
 # su nach oracle und Shellumgebung herstellen
 if [ `id -un` != "oracle" ]; then
-        exec su - oracle sh -c "`basename $0` $*"
+        exec su - oracle sh -c "`basename $0` $*" </dev/null
 fi
-# . /usr/local/etc/profile-oracle
+[ -f "/usr/local/etc/profile-oracle" ] && . /usr/local/etc/profile-oracle
 
 USERID='/ as sysdba'
 SQLCMD=sqlplus
@@ -49,6 +49,5 @@ from ALL_USERS
 where upper(USERNAME) not in ($SYSUSERS_SQLLST)
 order by USERNAME;
 EOF
-
 grep "XXFhGUSERSXX" $TMPFILE | sed 's/.*XXFhGUSERSXX//'
 

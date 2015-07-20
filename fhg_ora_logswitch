@@ -17,7 +17,7 @@
 # Inc., 675 Mass Ave, Cambridge MA 02139, USA or see <http://www.gnu.org/licenses/>
 #
 # 
-# Dfk/hoe   gelöschte Objekte endgültig freigeben ('Papierkorb leeren')
+# Dfk/hoe   Logwechsel 
 
 if [ `id -un` != "oracle" -a `id -un` != "root" ]; then
         echo "FEHLER: Programm darf nur als Benutzer root oder oracle ausgeführt werden." >&2
@@ -28,11 +28,12 @@ fi
 if [ `id -un` != "oracle" ]; then
         exec su - oracle sh -c "`basename $0` $*" </dev/null
 fi
+[ -f "/usr/local/etc/profile-oracle" ] && . /usr/local/etc/profile-oracle
 
 USERID=" / as sysdba"
 SQLCMD=sqlplus
 TMPFILE=$( mktemp /tmp/$(basename $0 .sh).XXXXXX) || exit 1
-MELDUNG_OK="System wurde geändert.";
+MELDUNG_OK="System wurde ge";	# 'System wurde geändert'
 
 trap "rm -f $TMPFILE" EXIT SIGHUP SIGINT SIGQUIT SIGABRT SIGTERM
 
