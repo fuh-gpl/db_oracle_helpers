@@ -1,0 +1,103 @@
+#!/bin/sh
+# 
+# Copyright (c) 2012 FuH Entwicklungsgesellschaft mbH, Umkirch, Germany. All rights reserved.
+# Author: Philipp Hoefflin, 2012, hoefflin@fuh-e.de
+#
+# Copy some basic information like trace-controlfiles, pfile, PW-File, and optionally an
+# SQL-Report about an oracle-instance to the given directory. The SQL-Report is not includes
+# any file called fhg_ora_dbinfo.sql is called. This could for example be 
+# http://www.idevelopment.info/data/Oracle/DBA_tips/Database_Administration/DBA_50.shtml.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation in version 2.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software Foundation,
+# Inc., 675 Mass Ave, Cambridge MA 02139, USA or see <http://www.gnu.org/licenses/>
+#
+if [ `id -un` != "oracle" -a `id -un` != "root" ]; then
+        echo "FEHLER: Programm darf nur als Benutzer root oder oracle ausgeführt werden." >&2
+        exit 1;
+fi
+
+# su nach oracle und Shellumgebung herstellen
+if [ `id -un` != "oracle" ]; then
+        exec su - oracle sh -c "`basename $0` $*" </dev/null
+fi
+. /usr/local/etc/profile-oracle
+
+
+TPRO=$(basename $0 .sh)
+ERR=0
+USERID='/ as sysdba'
+SQLCMD=sqlplus
+SYSUSERS_SQLLST="'${SYSUSERS// /','}'"
+INFO_SQLFILE=$(dirname $0)/$TPRO.sql
+DESTDIR=/tmp
+
+GET_OPTS=:
+while $GET_OPTS; do
+        case "x$1" in
+        x-*)
+                case "$1" in
+                -dir|--dir|-d)       
+				shift
+				DESTDIR="$1" ;;
+                *)      echo "FEHLER: falscher Parameter '$1'" >&2
+                        $0 -h
+                        exit 40 ;;
+                esac
+                shift
+                ;;
+        *)      # Ende Optionen
+                GET_OPTS=false
+                ;;
+        esac
+done
+
+
+# generating SQL-Report (ex. http://www.idevelopment.info/data/Oracle/DBA_tips/Database_Administration/DBA_50.shtml).
+if [  -f "$INFO_SQLFILE" ]; then
+	echo "INFO: generating SQL-Report"
+	$SQLCMD -s $USERID @$INFO_SQLFILE $DESTDIR/${TPRO}
+	X_ERR=$?; [ $ERR -eq 0 ] && ERR=$X_ERR
+	gzip -f  $DESTDIR/${TPRO}*.html
+	X_ERR=$?; [ $ERR -eq 0 ] && ERR=$X_ERR
+	echo "INFO: SQL-Report done (RET: $X_ERR)"
+fi
+
+
+# TRACE controlfile:
+TRACE_CONTROLFILE=$DESTDIR/controlfile$ORACLE_SID.trace
+echo "INFO: Trace controlfile to '$TRACE_CONTROLFILE'"
+echo "ALTER DATABASE BACKUP CONTROLFILE TO TRACE AS '$TRACE_CONTROLFILE';" | $SQLCMD -s $USERID
+X_ERR=$?; [ $ERR -eq 0 ] && ERR=$X_ERR
+gzip -f  $TRACE_CONTROLFILE
+X_ERR=$?; [ $ERR -eq 0 ] && ERR=$X_ERR
+
+# Pfile erzeugen:
+TRACE_PFILE=$DESTDIR/pfile$ORACLE_SID.trace
+echo "INFO: CREATE PFILE FROM SPFILE -> '$TRACE_PFILE'"
+echo "CREATE PFILE='$TRACE_PFILE' FROM SPFILE;" | $SQLCMD -s $USERID
+X_ERR=$?; [ $ERR -eq 0 ] && ERR=$X_ERR
+gzip -f  $TRACE_PFILE
+X_ERR=$?; [ $ERR -eq 0 ] && ERR=$X_ERR
+
+# copy some additional binary files needed for full restore
+for FILE in 	$ORACLE_HOME/dbs/orapw$ORACLE_SID \
+		$ORACLE_HOME/dbs/spfile${ORACLE_SID}.ora; do
+	if [ -f "$FILE" ]; then
+		echo "kopiere Datei $FILE"
+		cp $FILE $DESTDIR/
+		X_ERR=$?; [ $ERR -eq 0 ] && ERR=$X_ERR
+		gzip -f  $DESTDIR/$(basename $FILE)
+		X_ERR=$?; [ $ERR -eq 0 ] && ERR=$X_ERR
+	fi
+done
+
