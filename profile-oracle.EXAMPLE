@@ -1,0 +1,41 @@
+# change SID
+if [ -z "$ORACLE_SID" ]; then
+	# get first SID to be started on bootup (see /etc/oratab)
+	ORACLE_SID=$(fhg_ora_getsidlist auto | sed 's/[ ].*//')
+fi
+
+# Pfad zu unserer globalen login.sql
+SQLPATH=/usr/local/etc
+export SQLPATH
+ORACLE_BASE=/home/oracle/APP
+
+ORACLE_HOME=$ORACLE_BASE/product/11.2.0/dbhome_1
+TNS_ADMIN=$ORACLE_HOME/network/admin
+
+export ORACLE_BASE ORACLE_HOME ORACLE_SID TNS_ADMIN
+
+
+# Set ORA_NLSxx depending on 9i or 10g
+test -d $ORACLE_HOME/ocommon/nls/admin/data && export ORA_NLS33=$ORACLE_HOME/ocommon/nls/admin/data
+test -d $ORACLE_HOME/nls/data && export ORA_NLS10=$ORACLE_HOME/nls/data
+
+PATH=$ORACLE_HOME/bin:$PATH
+LD_LIBRARY_PATH=${LD_LIBRARY_PATH:+$LD_LIBRARY_PATH:}$ORACLE_HOME/lib:$ORACLE_HOME/ctx/lib
+CLASSPATH=$ORACLE_HOME/JRE:$ORACLE_HOME/jlib:$ORACLE_HOME/rdbms/jlib:$ORACLE_HOME/network/jlib
+
+export PATH LD_LIBRARY_PATH CLASSPATH
+
+# This requires the limits to have been increased by root
+# e.g. at boot time by the /etc/rc.d/oracle script, both
+# ulimit and kernel parameters.
+
+LANG=de_DE.utf8
+export LANG
+
+NLS_DATE_FORMAT=DD.MM.YYYY
+case "$LANG" in
+*utf*8*|*UTF*8*)        NLS_LANG=german_germany.AL32UTF8 ;;
+*)                      NLS_LANG=german_germany.we8iso8859p15 ;;
+esac
+export NLS_DATE_FORMAT NLS_LANG
+

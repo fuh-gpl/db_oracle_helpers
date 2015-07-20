@@ -1,0 +1,23 @@
+-- global sqlplus-Settings, variable SQLPATH has to point to the directory containing this file.
+SET SERVEROUTPUT ON SIZE 1000000
+
+-- remove trailing blanks on Terminal(TRIMOUT) and Spoolfiles (TRIMSPOOL)
+SET TRIMOUT   ON
+SET TRIMSPOOL ON
+
+-- make sqlplus al little more friendly...
+SET LONG 5000
+SET LINESIZE 100
+SET PAGESIZE 500
+COLUMN PLAN_PLUS_EXP FORMAT A80
+COLUMN GLOBAL_NAME NEW_VALUE gname
+SET TERMOUT OFF
+DEFINE gname=idle
+COLUMN global_name NEW_VALUE gname
+SELECT LOWER(USER) || '@' || SUBSTR(GLOBAL_NAME,1,DECODE(DOT,0,LENGTH(GLOBAL_NAME),DOT-1)) GLOBAL_NAME
+ FROM (SELECT GLOBAL_NAME, INSTR(GLOBAL_NAME,'.') DOT FROM GLOBAL_NAME );
+SET SQLPROMPT 'SQL-&gname> '
+DEFINE _EDITOR=vim
+SET EDITFILE /tmp/afiedt.buf.$USER.sql
+SET TERMOUT ON
+
