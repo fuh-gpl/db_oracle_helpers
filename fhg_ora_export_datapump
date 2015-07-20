@@ -37,9 +37,9 @@ if [ `id -un` != "oracle" -a `id -un` != "root" ]; then
 fi
 
 if [ `id -un` != "oracle" ]; then
-        exec su - oracle sh -c "cd `pwd`; `basename $0` $*"
+        exec su - oracle sh -c "cd `pwd`; `basename $0` $*" </dev/null
 fi
-# . /usr/local/etc/profile-oracle
+[ -f "/usr/local/etc/profile-oracle" ] && . /usr/local/etc/profile-oracle
 
 EXTNAME=
 # TMPFILE=$( mktemp /tmp/$(basename $0 .sh).XXXXXX) || exit 1
@@ -121,7 +121,7 @@ for SCHEMA in $DBS; do
 
 	echo "Registering datapump directory '$DIR'" > $OUTFILE
 	echo -e "SET ECHO ON\nCREATE OR REPLACE DIRECTORY fhg_ora_export_datapump_dir AS '$DIR';" | sqlplus -s / >> $OUTFILE 2>&1
-	sh -x -c "expdp $DBAUSER SCHEMAS=$SCHEMA DIRECTORY=fhg_ora_export_datapump_dir DUMPFILE=$DUMPFILE CONTENT=ALL NOLOGFILE=Y" >> $OUTFILE 2>&1
+	sh -x -c "expdp $DBAUSER SCHEMAS=$SCHEMA flashback_time=systimestamp DIRECTORY=fhg_ora_export_datapump_dir DUMPFILE=$DUMPFILE CONTENT=ALL NOLOGFILE=Y" >> $OUTFILE 2>&1
 	X_ERR=$?
         if [ $X_ERR -ne 0 ]; then
                 echo "FEHLER: beim Export des Datenbankusers $SCHEMA"
