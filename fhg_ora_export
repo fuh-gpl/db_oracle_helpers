@@ -131,7 +131,7 @@ for SCHEMA in $DBS; do
                 : OK
         else
                 echo "FEHLER: beim Export der Datenbank $DB"
-                [ $X_ERR == 0 ] && X_ERR=1
+                [ $X_ERR = 0 ] && X_ERR=1
         fi
         if [ $X_ERR -ne 0 ]; then
                 echo "FEHLER: beim Export des Datenbankusers $SCHEMA"
@@ -145,8 +145,8 @@ for SCHEMA in $DBS; do
 		fi
         fi
         echo "INFO: END   ERR: $X_ERR Export Datenbankuser $SCHEMA: `date`"
-        [ $ERR == 0 ] && ERR=$X_ERR
-        [ $ERR == 0 ] && ERR=$ERR_COMPRESS
+        [ $ERR = 0 ] && ERR=$X_ERR
+        [ $ERR = 0 ] && ERR=$ERR_COMPRESS
 done
 
 exit $ERR

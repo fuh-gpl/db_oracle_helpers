@@ -137,8 +137,8 @@ for SCHEMA in $DBS; do
 		fi
         fi
         echo "INFO: END   ERR: $X_ERR Export Datenbankuser $SCHEMA: `date`"
-        [ $ERR == 0 ] && ERR=$X_ERR
-        [ $ERR == 0 ] && ERR=$ERR_COMPRESS
+        [ $ERR = 0 ] && ERR=$X_ERR
+        [ $ERR = 0 ] && ERR=$ERR_COMPRESS
 done
 
 exit $ERR
