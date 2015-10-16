@@ -18,6 +18,7 @@
 #
 # Dfk/hoe   statistics aktualisieren (je Schema + dictionary)
 #
+RET=0
 SCHEMALIST="$@"
 if [ -z "$SCHEMALIST" ]; then
 	SCHEMALIST=$(/usr/local/bin/fhg_ora_getschemanames)

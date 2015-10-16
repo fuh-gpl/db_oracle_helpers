@@ -1,0 +1,53 @@
+#!/bin/bash
+# chkconfig: - 64 36
+# description: Oracle auto start-stop script.
+### BEGIN INIT INFO
+# Provides:       oracle-rdbms
+# Required-Start: $network 
+# Required-Stop:
+# X-UnitedLinux-Should-Start:
+# X-UnitedLinux-Should-Stop:
+# Default-Start:  3 5
+# Default-Stop:
+# Description:    Start oracle
+### END INIT INFO
+#
+# Set ORA_OWNER to the user id of the owner of the 
+# Oracle database in ORACLE_HOME.
+
+
+# LANG="de_DE.UTF-8"
+ORACLE_SID="NTX"; 		# spielt keine Rolle, greift für alle Instanzen in einem ORACLE_HOME 
+. /usr/local/etc/profile-oracle
+ORA_OWNER=oracle
+# Linux OOM-Killer 
+ORA_OOM_ADJ_SCORE="-800"
+
+if [ ! -f $ORACLE_HOME/bin/dbstart ]
+then
+    echo "Oracle startup: cannot start"
+    exit
+fi
+
+case "$1" in
+    start)
+        # Start the Oracle databases:
+        # The following command assumes that the oracle login 
+        # will not prompt the user for any values
+	test x"$ORA_OOM_ADJ_SCORE" != x && echo "$ORA_OOM_ADJ_SCORE" > /proc/self/oom_score_adj
+
+        su $ORA_OWNER -c "$ORACLE_HOME/bin/dbstart $ORACLE_HOME"
+        touch /var/lock/subsys/oracle-rdbms
+        ;;
+    stop)
+        # Stop the Oracle databases:
+        # The following command assumes that the oracle login 
+        # will not prompt the user for any values
+        su $ORA_OWNER -c "$ORACLE_HOME/bin/dbshut $ORACLE_HOME"
+        rm -f /var/lock/subsys/oracle-rdbms
+        ;;
+    restart)
+	$0 stop
+	$0 start
+	;;
+esac
